@@ -229,8 +229,14 @@ document.addEventListener("alpine:init", () => {
 
     async saveProduct() {
       if (this.saving) return;
-      if (!this.productForm.name_fa.trim() || !this.productForm.price) {
-        this.toast("لطفاً نام و قیمت محصول را وارد کنید", "error");
+      const name = (this.productForm.name_fa || "").trim();
+      const price = Number(this.productForm.price);
+      if (!name) {
+        this.toast("لطفاً نام محصول را وارد کنید", "error");
+        return;
+      }
+      if (!price || price < 0 || !Number.isFinite(price)) {
+        this.toast("لطفاً قیمت معتبر وارد کنید", "error");
         return;
       }
       if (!this.productForm.category_id) {

@@ -109,25 +109,24 @@ document.addEventListener("alpine:init", () => {
       if (this.activeCategory !== "cat-1") {
         list = list.filter((p) => p.category_id === this.activeCategory);
       }
-      if (this.searchQuery.trim()) {
-        const q = this.searchQuery.trim().toLowerCase();
-        list = list
-          .filter(
-            (p) =>
-              p.name_fa.includes(q) ||
-              p.description_fa.includes(q)
-          )
-          .map((p) => {
-            const name = p.name_fa.toLowerCase();
-            let score = 0;
-            if (name.startsWith(q)) score = 3;
-            else if (new RegExp("(^|[\\s،.!?])" + this._escapeRegex(q)).test(name)) score = 2;
-            else if (p.description_fa.includes(q)) score = 1;
-            return { ...p, _score: score };
-          })
-          .sort((a, b) => b._score - a._score || a.order - b.order);
+      const raw = this.searchQuery;
+      if (!raw || !raw.trim()) return list;
+      const q = raw.trim().toLowerCase().replace(/\s+/g, " ");
+      if (!q) return list;
+
+      const scored = [];
+      for (let i = 0; i < list.length; i++) {
+        const p = list[i];
+        const name = (p.name_fa || "").toLowerCase();
+        const desc = (p.description_fa || "").toLowerCase();
+        let score = 0;
+        if (name.startsWith(q)) score = 3;
+        else if (this._wordMatch(name, q)) score = 2;
+        else if (name.includes(q) || desc.includes(q)) score = 1;
+        if (score > 0) scored.push({ p, score, order: p.order });
       }
-      return list;
+      scored.sort((a, b) => b.score - a.score || a.order - b.order);
+      return scored.map((s) => s.p);
     },
 
     get featuredProducts() {
@@ -159,8 +158,13 @@ document.addEventListener("alpine:init", () => {
     },
 
     // Helpers
-    _escapeRegex(str) {
-      return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    _wordMatch(haystack, needle) {
+      if (!haystack || !needle) return false;
+      const words = haystack.split(/[\s،.!?،\-\/]+/);
+      for (let i = 0; i < words.length; i++) {
+        if (words[i] === needle) return true;
+      }
+      return false;
     },
 
     formatPrice(toman) {

@@ -16,12 +16,25 @@ CREATE TABLE IF NOT EXISTS public.products (
   image_url TEXT,
   is_featured BOOLEAN DEFAULT false,
   "order" INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  search_vector tsvector GENERATED ALWAYS AS (
-    setweight(to_tsvector('simple', coalesce(name_fa, '')), 'A') ||
-    setweight(to_tsvector('simple', coalesce(description_fa, '')), 'B')
-  ) STORED
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add search_vector column to existing tables (safe for re-runs)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'products'
+    AND column_name = 'search_vector'
+  ) THEN
+    ALTER TABLE public.products ADD COLUMN search_vector tsvector
+    GENERATED ALWAYS AS (
+      setweight(to_tsvector('simple', coalesce(name_fa, '')), 'A') ||
+      setweight(to_tsvector('simple', coalesce(description_fa, '')), 'B')
+    ) STORED;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.cafe_info (
   id TEXT PRIMARY KEY DEFAULT 'singleton',
@@ -42,6 +55,8 @@ CREATE TABLE IF NOT EXISTS public.cafe_info (
 CREATE INDEX IF NOT EXISTS idx_products_search ON public.products USING gin (search_vector);
 CREATE INDEX IF NOT EXISTS idx_products_category ON public.products (category_id);
 CREATE INDEX IF NOT EXISTS idx_products_order ON public.products ("order");
+CREATE INDEX IF NOT EXISTS idx_products_name_fa ON public.products (name_fa text_pattern_ops);
+CREATE INDEX IF NOT EXISTS idx_products_is_featured ON public.products (is_featured) WHERE is_featured = true;
 CREATE INDEX IF NOT EXISTS idx_categories_order ON public.categories ("order");
 
 -- 3. Enable Row Level Security (RLS) on all tables
@@ -59,7 +74,7 @@ CREATE POLICY "Public read products" ON public.products FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public read cafe_info" ON public.cafe_info;
 CREATE POLICY "Public read cafe_info" ON public.cafe_info FOR SELECT USING (true);
 
--- 5. Policies for authenticated (admin) INSERT/UPDATE/DELETE (split from SELECT to avoid multiple permissive)
+-- 5. Policies for authenticated (admin) INSERT/UPDATE/DELETE (split to avoid multiple permissive)
 DROP POLICY IF EXISTS "Admin insert categories" ON public.categories;
 CREATE POLICY "Admin insert categories" ON public.categories FOR INSERT
   TO authenticated WITH CHECK ((select auth.role()) = 'authenticated');
@@ -177,7 +192,7 @@ DROP POLICY IF EXISTS "Allow authenticated delete" ON public.feedbacks;
 CREATE POLICY "Allow authenticated delete" ON public.feedbacks
   FOR DELETE TO authenticated USING ((select auth.role()) = 'authenticated');
 
--- Auto-delete function with safe search_path
+-- Auto-delete feedbacks older than 7 days
 CREATE OR REPLACE FUNCTION delete_old_feedbacks()
 RETURNS void
 LANGUAGE plpgsql
@@ -188,7 +203,73 @@ BEGIN
 END;
 $$;
 
--- Schedule daily cleanup at 3 AM via pg_cron (requires pg_cron extension)
+-- ═══════════════════════════════════════════════════
+-- Task 1: Orphaned image cleanup with audit log
+-- ═══════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS public.image_cleanup_log (
+  id BIGSERIAL PRIMARY KEY,
+  file_path TEXT NOT NULL,
+  image_url TEXT,
+  reason TEXT NOT NULL,
+  cleaned_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_image_cleanup_log_cleaned_at ON public.image_cleanup_log (cleaned_at);
+
+ALTER TABLE public.image_cleanup_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role can manage cleanup log" ON public.image_cleanup_log;
+CREATE POLICY "Service role can manage cleanup log" ON public.image_cleanup_log
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Function: find and delete orphaned storage files not referenced by any product
+CREATE OR REPLACE FUNCTION cleanup_orphaned_images()
+RETURNS TABLE(deleted_path TEXT, deleted_url TEXT, delete_reason TEXT)
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  rec RECORD;
+  storage_path TEXT;
+  marker TEXT := '/storage/v1/object/public/cafe-images/';
+  pos INTEGER;
+BEGIN
+  FOR rec IN
+    SELECT DISTINCT
+      so.name AS file_name,
+      so.bucket_id,
+      so.created_at AS file_created
+    FROM storage.objects so
+    WHERE so.bucket_id = 'cafe-images'
+      AND so.created_at < now() - INTERVAL '7 days'
+  LOOP
+    storage_path := rec.file_name;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.products p
+      WHERE p.image_url LIKE '%cafe-images/' || storage_path || '%'
+    ) THEN
+      DELETE FROM storage.objects
+      WHERE bucket_id = 'cafe-images' AND name = storage_path;
+
+      INSERT INTO public.image_cleanup_log (file_path, image_url, reason)
+      VALUES (
+        storage_path,
+        'https://ehdwvdubcudlvbpbsvld.supabase.co/storage/v1/object/public/cafe-images/' || storage_path,
+        'orphaned_7_days'
+      );
+
+      deleted_path := storage_path;
+      deleted_url := 'https://ehdwvdubcudlvbpbsvld.supabase.co/storage/v1/object/public/cafe-images/' || storage_path;
+      delete_reason := 'orphaned_7_days';
+      RETURN NEXT;
+    END IF;
+  END LOOP;
+END;
+$$;
+
+-- Schedule daily cleanup jobs via pg_cron (requires pg_cron extension)
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
@@ -196,6 +277,11 @@ BEGIN
       'delete-old-feedbacks',
       '0 3 * * *',
       'SELECT delete_old_feedbacks()'
+    );
+    PERFORM cron.schedule(
+      'cleanup-orphaned-images',
+      '30 3 * * *',
+      'SELECT cleanup_orphaned_images()'
     );
   END IF;
 END $$;
@@ -213,7 +299,7 @@ CREATE POLICY "Authenticated users can upload images"
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (bucket_id = 'cafe-images');
 
--- Public bucket allows direct URL access; no broad SELECT policy needed (fixes public_bucket_allows_listing)
+-- Public bucket allows direct URL access; no broad SELECT policy needed
 DROP POLICY IF EXISTS "Anyone can view images" ON storage.objects;
 
 DROP POLICY IF EXISTS "Authenticated users can delete images" ON storage.objects;

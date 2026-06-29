@@ -167,9 +167,6 @@ document.addEventListener("alpine:init", () => {
     get featuredCount() {
       return this.products.filter((p) => p.is_featured).length;
     },
-    get visitCount() {
-      return Utils.getStorage("cafe_visit_count", 0);
-    },
     get feedbackCount() {
       return this.feedbacks.length;
     },
@@ -244,6 +241,7 @@ document.addEventListener("alpine:init", () => {
 
       try {
         if (this.editingProduct) {
+          const oldImageUrl = this.editingProduct.image_url;
           const updated = {
             ...this.editingProduct,
             name_fa: this.productForm.name_fa,
@@ -253,7 +251,7 @@ document.addEventListener("alpine:init", () => {
             image_url: this.productForm.image_url,
             is_featured: this.productForm.is_featured,
           };
-          await SupaDB.saveProduct(updated);
+          await SupaDB.updateProduct(updated, oldImageUrl);
           const idx = this.products.findIndex(
             (p) => p.id === this.editingProduct.id
           );
@@ -360,7 +358,7 @@ document.addEventListener("alpine:init", () => {
     async executeDelete() {
       try {
         if (this.deleteType === "product") {
-          await SupaDB.deleteProduct(this.deleteTarget.id);
+          await SupaDB.deleteProduct(this.deleteTarget.id, this.deleteTarget.image_url);
           this.products = this.products.filter(
             (p) => p.id !== this.deleteTarget.id
           );

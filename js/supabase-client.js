@@ -101,13 +101,49 @@ const SupaDB = {
     return data;
   },
 
-  async deleteProduct(id) {
+  async updateProduct(product, oldImageUrl) {
+    if (!this.ready) return this._localSave("cafe_products", product);
+    const { data, error } = await this.client
+      .from("products")
+      .upsert(product, { onConflict: "id" })
+      .select()
+      .single();
+    if (error) throw error;
+    if (oldImageUrl && oldImageUrl !== product.image_url) {
+      await this._deleteStorageFile(oldImageUrl);
+    }
+    return data;
+  },
+
+  async deleteProduct(id, imageUrl) {
     if (!this.ready) return this._localDelete("cafe_products", id);
     const { error } = await this.client
       .from("products")
       .delete()
       .eq("id", id);
     if (error) throw error;
+    if (imageUrl) {
+      await this._deleteStorageFile(imageUrl);
+    }
+  },
+
+  async _deleteStorageFile(imageUrl) {
+    if (!this.ready || !imageUrl) return;
+    const path = this._extractStoragePath(imageUrl);
+    if (!path) return;
+    try {
+      await this.client.storage.from("cafe-images").remove([path]);
+    } catch (e) {
+      console.warn("Storage file cleanup failed:", e);
+    }
+  },
+
+  _extractStoragePath(url) {
+    if (!url) return null;
+    const marker = "/storage/v1/object/public/cafe-images/";
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return url.substring(idx + marker.length);
   },
 
   async fetchCafeInfo() {

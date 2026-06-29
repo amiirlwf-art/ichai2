@@ -42,6 +42,7 @@ document.addEventListener("alpine:init", () => {
     // Image upload state
     imageMode: "url",
     uploading: false,
+    saving: false,
 
     // Product form
     productForm: {
@@ -230,10 +231,12 @@ document.addEventListener("alpine:init", () => {
     },
 
     async saveProduct() {
+      if (this.saving) return;
       if (!this.productForm.name_fa.trim() || !this.productForm.price) {
         this.toast("لطفاً نام و قیمت محصول را وارد کنید", "error");
         return;
       }
+      this.saving = true;
 
       try {
         if (this.editingProduct) {
@@ -272,6 +275,7 @@ document.addEventListener("alpine:init", () => {
         console.error("Save product failed:", e);
         this.toast("ذخیره محصول ناموفق بود. دوباره تلاش کنید", "error");
       }
+      this.saving = false;
     },
 
     confirmDeleteProduct(product) {

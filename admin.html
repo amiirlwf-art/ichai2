@@ -433,7 +433,7 @@
       </div>
 
       <div class="flex gap-3 mt-6">
-        <button @click="saveProduct()" class="btn btn-gold flex-1" x-text="editingProduct ? 'ذخیره تغییرات' : 'افزودن محصول'"></button>
+        <button @click="saveProduct()" class="btn btn-gold flex-1" :disabled="saving" x-text="saving ? 'در حال ذخیره...' : (editingProduct ? 'ذخیره تغییرات' : 'افزودن محصول')"></button>
         <button @click="showProductModal=false" class="btn btn-outline">انصراف</button>
       </div>
     </div>

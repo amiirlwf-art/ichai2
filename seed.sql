@@ -153,3 +153,26 @@ BEGIN
     );
   END IF;
 END $$;
+
+-- ═══════════════════════════════════════════════════
+-- Storage: cafe-images bucket + policies
+-- ═══════════════════════════════════════════════════
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('cafe-images', 'cafe-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Authenticated users can upload images" ON storage.objects;
+CREATE POLICY "Authenticated users can upload images"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'cafe-images');
+
+DROP POLICY IF EXISTS "Anyone can view images" ON storage.objects;
+CREATE POLICY "Anyone can view images"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'cafe-images');
+
+DROP POLICY IF EXISTS "Authenticated users can delete images" ON storage.objects;
+CREATE POLICY "Authenticated users can delete images"
+ON storage.objects FOR DELETE TO authenticated
+USING (bucket_id = 'cafe-images');

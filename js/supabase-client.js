@@ -57,7 +57,7 @@ const SupaDB = {
     if (!this.ready) return this._localSave("cafe_categories", cat);
     const { data, error } = await this.client
       .from("categories")
-      .upsert(cat)
+      .upsert(cat, { onConflict: "id" })
       .select()
       .single();
     if (error) throw error;
@@ -94,7 +94,7 @@ const SupaDB = {
     if (!this.ready) return this._localSave("cafe_products", product);
     const { data, error } = await this.client
       .from("products")
-      .upsert(product)
+      .upsert(product, { onConflict: "id" })
       .select()
       .single();
     if (error) throw error;
@@ -131,7 +131,7 @@ const SupaDB = {
     if (!this.ready) return this._localSave("cafe_info", info);
     const { data, error } = await this.client
       .from("cafe_info")
-      .upsert(info)
+      .upsert(info, { onConflict: "id" })
       .select()
       .single();
     if (error) throw error;

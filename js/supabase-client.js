@@ -158,6 +158,47 @@ const SupaDB = {
     return urlData.publicUrl;
   },
 
+  async submitFeedback(feedback) {
+    const record = {
+      ...feedback,
+      id: Utils.generateId(),
+      created_at: new Date().toISOString(),
+    };
+    if (!this.ready) {
+      this._localSave("cafe_feedbacks", record);
+      return record;
+    }
+    try {
+      const { data, error } = await this.client
+        .from("feedbacks")
+        .insert(feedback)
+        .select()
+        .single();
+      if (error) throw error;
+      this.cleanOldFeedbacks();
+      return data;
+    } catch (e) {
+      console.warn("Supabase submit feedback failed, saving locally:", e);
+      this._localSave("cafe_feedbacks", record);
+      return record;
+    }
+  },
+
+  async cleanOldFeedbacks() {
+    if (!this.ready) return;
+    try {
+      const cutoff = new Date(
+        Date.now() - 7 * 24 * 60 * 60 * 1000
+      ).toISOString();
+      await this.client
+        .from("feedbacks")
+        .delete()
+        .lt("created_at", cutoff);
+    } catch (e) {
+      console.warn("Cleanup old feedbacks failed:", e);
+    }
+  },
+
   _localSave(key, item) {
     const list = Utils.getStorage(key, []);
     const idx = list.findIndex((x) => x.id === item.id);

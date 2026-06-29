@@ -1,6 +1,6 @@
 /**
  * app.js — Public menu page logic (Alpine.js)
- * Manages: categories, products, search, filtering, favorites, UI state.
+ * Manages: categories, products, search, filtering, favorites panel, feedback, UI state.
  * No cart, no ordering — purely a display menu.
  */
 
@@ -16,7 +16,13 @@ document.addEventListener("alpine:init", () => {
     isLoaded: false,
     showMobileMenu: false,
     darkMode: false,
-    showFavorites: false,
+    showFavPanel: false,
+
+    // Feedback state
+    feedbackForm: { name: "", message: "" },
+    feedbackSending: false,
+    feedbackSuccess: false,
+    feedbackError: "",
 
     // Init
     async init() {
@@ -25,12 +31,10 @@ document.addEventListener("alpine:init", () => {
       this.loadFavorites();
       this.loadDarkMode();
       this.trackVisit();
-      // Simulate brief load for skeleton effect
       setTimeout(() => {
         this.isLoaded = true;
         this.$nextTick(() => this.observeFadeIns());
       }, 600);
-      // Navbar scroll effect
       this.setupNavbar();
     },
 
@@ -39,7 +43,6 @@ document.addEventListener("alpine:init", () => {
       this.categories = await SupaDB.fetchCategories();
       this.products = await SupaDB.fetchProducts();
       this.cafeInfo = await SupaDB.fetchCafeInfo();
-      // Sort by order
       this.categories.sort((a, b) => a.order - b.order);
       this.products.sort((a, b) => a.order - b.order);
     },
@@ -53,33 +56,6 @@ document.addEventListener("alpine:init", () => {
     // Favorites
     loadFavorites() {
       this.favorites = Utils.getStorage("cafe_favorites", []);
-    },
-
-    // Dark mode
-    loadDarkMode() {
-      this.darkMode = Utils.getStorage("cafe_dark_mode", false);
-      if (this.darkMode) {
-        document.body.classList.add("dark-mode");
-      }
-    },
-
-    toggleTheme() {
-      this.darkMode = !this.darkMode;
-      document.body.classList.toggle("dark-mode", this.darkMode);
-      Utils.setStorage("cafe_dark_mode", this.darkMode);
-    },
-
-    // Favorites view
-    setShowFavorites(val) {
-      this.showFavorites = val;
-      if (val) {
-        this.activeCategory = "cat-1";
-        this.searchQuery = "";
-      }
-    },
-
-    get favoriteProducts() {
-      return this.products.filter((p) => this.favorites.includes(p.id));
     },
 
     toggleFavorite(productId) {
@@ -96,15 +72,40 @@ document.addEventListener("alpine:init", () => {
       return this.favorites.includes(productId);
     },
 
+    get favoriteProducts() {
+      return this.products.filter((p) => this.favorites.includes(p.id));
+    },
+
+    get favoriteCount() {
+      return this.favorites.length;
+    },
+
+    // Favorites panel
+    toggleFavPanel() {
+      this.showFavPanel = !this.showFavPanel;
+    },
+
+    // Dark mode
+    loadDarkMode() {
+      this.darkMode = Utils.getStorage("cafe_dark_mode", false);
+      if (this.darkMode) {
+        document.body.classList.add("dark-mode");
+      }
+    },
+
+    toggleTheme() {
+      this.darkMode = !this.darkMode;
+      document.body.classList.toggle("dark-mode", this.darkMode);
+      Utils.setStorage("cafe_dark_mode", this.darkMode);
+    },
+
     // Filtering
     setCategory(catId) {
       this.activeCategory = catId;
     },
 
     get filteredProducts() {
-      let list = this.showFavorites
-        ? this.favoriteProducts
-        : this.products;
+      let list = this.products;
       if (this.activeCategory !== "cat-1") {
         list = list.filter((p) => p.category_id === this.activeCategory);
       }
@@ -123,8 +124,28 @@ document.addEventListener("alpine:init", () => {
       return this.products.filter((p) => p.is_featured);
     },
 
-    get favoriteCount() {
-      return this.favorites.length;
+    // Feedback
+    async submitFeedback() {
+      this.feedbackError = "";
+      if (!this.feedbackForm.message.trim()) {
+        this.feedbackError = "لطفاً پیام خود را بنویسید.";
+        return;
+      }
+      this.feedbackSending = true;
+      try {
+        await SupaDB.submitFeedback({
+          name: this.feedbackForm.name.trim() || "ناشناس",
+          message: this.feedbackForm.message.trim(),
+        });
+        this.feedbackSuccess = true;
+        this.feedbackForm = { name: "", message: "" };
+        setTimeout(() => (this.feedbackSuccess = false), 4000);
+      } catch (e) {
+        console.warn("Feedback submit failed:", e);
+        this.feedbackError = "خطا در ارسال. لطفاً دوباره تلاش کنید.";
+      } finally {
+        this.feedbackSending = false;
+      }
     },
 
     // Helpers

@@ -1,10 +1,58 @@
--- Seed data for Supabase
--- Run this in the Supabase SQL Editor after creating the tables
+-- 1. Create tables
+CREATE TABLE IF NOT EXISTS public.categories (
+  id TEXT PRIMARY KEY,
+  name_fa TEXT NOT NULL,
+  icon TEXT NOT NULL DEFAULT '✦',
+  "order" INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Seed categories
+CREATE TABLE IF NOT EXISTS public.products (
+  id TEXT PRIMARY KEY,
+  category_id TEXT REFERENCES public.categories(id) ON DELETE CASCADE,
+  name_fa TEXT NOT NULL,
+  description_fa TEXT,
+  price INTEGER NOT NULL,
+  image_url TEXT,
+  is_featured BOOLEAN DEFAULT false,
+  "order" INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.cafe_info (
+  id TEXT PRIMARY KEY DEFAULT 'singleton',
+  name TEXT NOT NULL,
+  tagline TEXT,
+  phone TEXT,
+  address_fa TEXT,
+  instagram TEXT,
+  telegram TEXT,
+  hours_fa TEXT,
+  about_fa TEXT,
+  welcome_fa TEXT,
+  logo_url TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Enable Row Level Security (RLS) on all tables
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cafe_info ENABLE ROW LEVEL SECURITY;
+
+-- 3. Policies for public (anonymous) read access
+CREATE POLICY "Public read categories" ON public.categories FOR SELECT USING (true);
+CREATE POLICY "Public read products" ON public.products FOR SELECT USING (true);
+CREATE POLICY "Public read cafe_info" ON public.cafe_info FOR SELECT USING (true);
+
+-- 4. Policies for authenticated (admin) full access
+CREATE POLICY "Admin all categories" ON public.categories FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Admin all products" ON public.products FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Admin all cafe_info" ON public.cafe_info FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
+-- 5. Seed data (insert initial values)
 INSERT INTO public.categories (id, name_fa, icon, "order") VALUES
   ('cat-1', 'همه', '✦', 0),
-  ('cat-2', 'قهوه‌های گرم', '☕', 1),
+  ('cat-2', 'قهوه‌های گرم', '☕️', 1),
   ('cat-3', 'نوشیدنی‌های سرد', '🧊', 2),
   ('cat-4', 'چای و دمنوش', '🍵', 3),
   ('cat-5', 'دسرها', '🍰', 4),
@@ -12,7 +60,6 @@ INSERT INTO public.categories (id, name_fa, icon, "order") VALUES
   ('cat-7', 'غذاهای سبک', '🥗', 6)
 ON CONFLICT (id) DO NOTHING;
 
--- Seed cafe info
 INSERT INTO public.cafe_info (id, name, tagline, phone, address_fa, instagram, telegram, hours_fa, about_fa, welcome_fa)
 VALUES (
   'singleton',
@@ -28,7 +75,6 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Seed products
 INSERT INTO public.products (id, category_id, name_fa, description_fa, price, image_url, is_featured, "order") VALUES
   ('prod-1', 'cat-2', 'اسپرسو', 'عصاره خالص قهوه با طعمی غلیظ و عطری بی‌نظیر', 85000, 'https://images.unsplash.com/photo-1510707577719-ae7c14805e3a?w=400&q=80', true, 1),
   ('prod-2', 'cat-2', 'لاته', 'ترکیب لطیف اسپرسو با شیر بخار‌خورده و فوم مخملی', 125000, 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&q=80', true, 2),
@@ -45,9 +91,42 @@ INSERT INTO public.products (id, category_id, name_fa, description_fa, price, im
   ('prod-13', 'cat-4', 'چای ماسالا', 'چای هندی با ادویه‌های معطر و شیر بخار‌خورده', 110000, 'https://images.unsplash.com/photo-1593527141222-ee3e83766b2f?w=400&q=80', true, 13),
   ('prod-14', 'cat-5', 'تیرامیسو', 'دسر ایتالیایی با قهوه اسپرسو و پنیر ماسکارپونه', 155000, 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=400&q=80', true, 14),
   ('prod-15', 'cat-5', 'چیزکیک', 'کیک پنیری نرم با سس توت‌فرنگی تازه', 145000, 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=400&q=80', false, 15),
-  ('prod-16', 'cat-5', 'براونی شکلاتی', 'براونی تازه با مغز گردو و سس شکلات تلخ', 125000, 'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?w=400&q=80', false, 16),
-  ('prod-17', 'cat-6', 'صبحانه انگلیسی', 'تخم‌مرغ، بیکن، لوبیا، نان تست و سبزیجات تازه', 245000, 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400&q=80', true, 17),
-  ('prod-18', 'cat-6', 'پنکیک', 'پنکیک نرم با شیره افرا و میوه‌های تازه فصل', 175000, 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=80', false, 18),
-  ('prod-19', 'cat-7', 'سالاد سزار', 'کاهو رومی، مرغ گریل، پارمزان و سس سزار مخصوص', 195000, 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400&q=80', false, 19),
-  ('prod-20', 'cat-7', 'ساندویچ کلاب', 'نان تست با مرغ، بیکن، آووکادو و سبزیجات تازه', 215000, 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400&q=80', false, 20)
+  ('prod-16', 'cat-5', 'براونی شکلاتی', 'براونی تازه با مغز گردو و سس شکلات تلخ', 125000, 'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?w=400&q=80', false, 16)
 ON CONFLICT (id) DO NOTHING;
+
+-- ═══════════════════════════════════════════════════
+-- Feedbacks table (انتقادات و پیشنهادات)
+-- Run this in the Supabase SQL Editor
+-- ═══════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS public.feedbacks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT DEFAULT 'ناشناس',
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedbacks_created_at ON public.feedbacks (created_at);
+
+-- Row Level Security: allow anonymous inserts, authenticated reads/deletes
+ALTER TABLE public.feedbacks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow anonymous insert" ON public.feedbacks
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow authenticated select" ON public.feedbacks
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow authenticated delete" ON public.feedbacks
+  FOR DELETE USING (auth.role() = 'authenticated');
+
+-- Auto-delete function: removes feedbacks older than 7 days
+CREATE OR REPLACE FUNCTION delete_old_feedbacks()
+RETURNS void AS $$
+BEGIN
+  DELETE FROM public.feedbacks WHERE created_at < now() - INTERVAL '7 days';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Optional: if pg_cron extension is available, schedule daily cleanup at 3 AM
+-- SELECT cron.schedule('delete-old-feedbacks', '0 3 * * *', 'SELECT delete_old_feedbacks()');

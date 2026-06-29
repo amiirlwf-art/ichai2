@@ -1,570 +1,1197 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fa" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>پنل مدیریت — کافه آی‌چای</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>پنل مدیریت — کافه آی‌چای</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;800;900&display=swap"
+      rel="stylesheet"
+    />
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: { fa: ['Vazirmatn', 'Tahoma', 'sans-serif'] },
-        }
-      }
-    };
-  </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: { fa: ["Vazirmatn", "Tahoma", "sans-serif"] },
+          },
+        },
+      };
+    </script>
 
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <link rel="stylesheet" href="css/admin.css">
-</head>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+    <link rel="stylesheet" href="css/admin.css" />
+  </head>
 
-<body class="admin-body font-fa" x-data="adminPanel" :class="{ 'light-mode': !darkMode }">
-
-  <!-- ═══════════ LOGIN SCREEN ═══════════ -->
-  <div x-show="!isAuthenticated" class="login-screen" x-cloak>
-    <div class="login-box">
-      <div class="text-center mb-6">
-        <div class="text-4xl mb-2">☕</div>
-        <h2 class="login-title">ورود به پنل مدیریت</h2>
-        <p class="text-sm mt-1" style="color:var(--admin-text-muted)">کافه آی‌چای</p>
+  <body
+    class="admin-body font-fa"
+    x-data="adminPanel"
+    :class="{ 'light-mode': !darkMode }"
+  >
+    <!-- ═══════════ LOGIN SCREEN ═══════════ -->
+    <div x-show="!isAuthenticated" class="login-screen" x-cloak>
+      <div class="login-box">
+        <div class="text-center mb-6">
+          <div class="text-4xl mb-2">☕</div>
+          <h2 class="login-title">ورود به پنل مدیریت</h2>
+          <p class="text-sm mt-1" style="color: var(--admin-text-muted)">
+            کافه آی‌چای
+          </p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ایمیل</label>
+          <input
+            type="email"
+            class="form-input"
+            x-model="loginEmail"
+            placeholder="admin@example.com"
+            @keydown.enter="login()"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">رمز عبور</label>
+          <input
+            type="password"
+            class="form-input"
+            x-model="loginPassword"
+            placeholder="••••••••"
+            @keydown.enter="login()"
+          />
+        </div>
+        <button
+          @click="login()"
+          class="btn btn-gold w-full"
+          :disabled="loginLoading"
+          style="width: 100%"
+        >
+          <span x-show="!loginLoading">ورود</span>
+          <span x-show="loginLoading">در حال ورود...</span>
+        </button>
+        <p
+          x-show="loginError"
+          class="text-sm mt-3 text-center"
+          style="color: var(--admin-red)"
+          x-text="loginError"
+        ></p>
       </div>
-      <div class="form-group">
-        <label class="form-label">ایمیل</label>
-        <input type="email" class="form-input" x-model="loginEmail" placeholder="admin@example.com"
-               @keydown.enter="login()">
-      </div>
-      <div class="form-group">
-        <label class="form-label">رمز عبور</label>
-        <input type="password" class="form-input" x-model="loginPassword" placeholder="••••••••"
-               @keydown.enter="login()">
-      </div>
-      <button @click="login()" class="btn btn-gold w-full" :disabled="loginLoading" style="width:100%">
-        <span x-show="!loginLoading">ورود</span>
-        <span x-show="loginLoading">در حال ورود...</span>
-      </button>
-      <p x-show="loginError" class="text-sm mt-3 text-center" style="color:var(--admin-red)" x-text="loginError"></p>
     </div>
-  </div>
 
-  <!-- ═══════════ ADMIN PANEL (visible when authenticated) ═══════════ -->
-  <div x-show="isAuthenticated">
+    <!-- ═══════════ ADMIN PANEL (visible when authenticated) ═══════════ -->
+    <div x-show="isAuthenticated">
+      <!-- ═══════════ SIDEBAR ═══════════ -->
+      <aside class="admin-sidebar" :class="{ 'open': sidebarOpen }">
+        <div class="sidebar-logo">
+          <h2>☕ آی‌چای</h2>
+          <p class="text-xs mt-1" style="color: var(--admin-text-muted)">
+            پنل مدیریت
+          </p>
+        </div>
 
-  <!-- ═══════════ SIDEBAR ═══════════ -->
-  <aside class="admin-sidebar" :class="{ 'open': sidebarOpen }">
-    <div class="sidebar-logo">
-      <h2>☕ آی‌چای</h2>
-      <p class="text-xs mt-1" style="color:var(--admin-text-muted)">پنل مدیریت</p>
-    </div>
-
-    <nav class="sidebar-nav">
-      <button class="nav-item" :class="{ 'active': activePage === 'dashboard' }" @click="activePage='dashboard'; sidebarOpen=false">
+        <nav class="sidebar-nav">
+          <!-- <button class="nav-item" :class="{ 'active': activePage === 'dashboard' }" @click="activePage='dashboard'; sidebarOpen=false">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         داشبورد
-      </button>
-      <button class="nav-item" :class="{ 'active': activePage === 'products' }" @click="activePage='products'; sidebarOpen=false">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-        محصولات
-      </button>
-      <button class="nav-item" :class="{ 'active': activePage === 'categories' }" @click="activePage='categories'; sidebarOpen=false">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-        دسته‌بندی‌ها
-      </button>
-      <button class="nav-item" :class="{ 'active': activePage === 'content' }" @click="activePage='content'; sidebarOpen=false">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-        مدیریت محتوا
-      </button>
-      <button class="nav-item" :class="{ 'active': activePage === 'orders' }" @click="activePage='orders'; sidebarOpen=false">
+      </button> -->
+          <button
+            class="nav-item"
+            :class="{ 'active': activePage === 'products' }"
+            @click="activePage='products'; sidebarOpen=false"
+          >
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+              />
+            </svg>
+            محصولات
+          </button>
+          <button
+            class="nav-item"
+            :class="{ 'active': activePage === 'categories' }"
+            @click="activePage='categories'; sidebarOpen=false"
+          >
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M4 6h16M4 10h16M4 14h16M4 18h16"
+              />
+            </svg>
+            دسته‌بندی‌ها
+          </button>
+          <button
+            class="nav-item"
+            :class="{ 'active': activePage === 'content' }"
+            @click="activePage='content'; sidebarOpen=false"
+          >
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+            مدیریت محتوا
+          </button>
+          <!-- <button class="nav-item" :class="{ 'active': activePage === 'orders' }" @click="activePage='orders'; sidebarOpen=false">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
         سفارشات
-      </button>
-      <button class="nav-item" :class="{ 'active': activePage === 'settings' }" @click="activePage='settings'; sidebarOpen=false">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
-        تنظیمات
-      </button>
-    </nav>
+      </button> -->
+          <button
+            class="nav-item"
+            :class="{ 'active': activePage === 'settings' }"
+            @click="activePage='settings'; sidebarOpen=false"
+          >
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            تنظیمات
+          </button>
+        </nav>
 
-    <div class="p-4 border-t" style="border-color:var(--admin-border)">
-      <a href="index.html" target="_blank" class="nav-item" style="margin-bottom:0.25rem">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-        مشاهده سایت
-      </a>
-      <button @click="logout()" class="nav-item" style="margin-bottom:0;color:var(--admin-red)">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-        خروج
-      </button>
-    </div>
-  </aside>
-
-  <!-- Mobile sidebar overlay -->
-  <div x-show="sidebarOpen" @click="sidebarOpen=false" class="fixed inset-0 bg-black/60 z-[150] md:hidden" x-transition.opacity></div>
-
-  <!-- ═══════════ MAIN CONTENT ═══════════ -->
-  <main class="admin-main">
-
-    <!-- Mobile top bar -->
-    <div class="md:hidden flex items-center justify-between mb-4">
-      <button @click="sidebarOpen = !sidebarOpen" class="btn btn-outline btn-sm">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
-      </button>
-      <span class="text-sm font-bold" style="color:var(--admin-gold)">پنل مدیریت آی‌چای</span>
-      <button @click="toggleTheme()" class="btn btn-outline btn-sm">
-        <svg x-show="darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        <svg x-show="!darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-      </button>
-    </div>
-
-    <!-- ─── DASHBOARD PAGE ─── -->
-    <div x-show="activePage === 'dashboard'">
-      <div class="admin-topbar">
-        <h1 class="topbar-title">داشبورد</h1>
-        <button @click="toggleTheme()" class="btn btn-outline btn-sm hidden md:inline-flex">
-          <svg x-show="darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-          <svg x-show="!darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-          <span x-text="darkMode ? 'حالت روشن' : 'حالت تاریک'"></span>
-        </button>
-      </div>
-
-      <!-- Stats grid -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="stat-card">
-          <div class="stat-number" x-text="toPersianNum(totalProducts)">۲۰</div>
-          <div class="stat-label">کل محصولات</div>
+        <div class="p-4 border-t" style="border-color: var(--admin-border)">
+          <a
+            href="index.html"
+            target="_blank"
+            class="nav-item"
+            style="margin-bottom: 0.25rem"
+          >
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+              />
+            </svg>
+            مشاهده سایت
+          </a>
+          <button
+            @click="logout()"
+            class="nav-item"
+            style="margin-bottom: 0; color: var(--admin-red)"
+          >
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+            خروج
+          </button>
         </div>
-        <div class="stat-card">
-          <div class="stat-number" x-text="toPersianNum(totalCategories)">۶</div>
-          <div class="stat-label">دسته‌بندی‌ها</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" x-text="toPersianNum(featuredCount)">۵</div>
-          <div class="stat-label">محصولات ویژه</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" x-text="formatPrice(averagePrice)">—</div>
-          <div class="stat-label">میانگین قیمت</div>
-        </div>
-      </div>
+      </aside>
 
-      <!-- Recent orders preview -->
-      <div class="data-table-wrapper mb-6">
-        <div class="flex items-center justify-between p-4" style="border-bottom:1px solid var(--admin-border)">
-          <h3 class="font-bold" style="color:var(--admin-text)">آخرین سفارشات</h3>
-          <button @click="activePage='orders'" class="text-sm" style="color:var(--admin-gold)">مشاهده همه ←</button>
+      <!-- Mobile sidebar overlay -->
+      <div
+        x-show="sidebarOpen"
+        @click="sidebarOpen=false"
+        class="fixed inset-0 bg-black/60 z-[150] md:hidden"
+        x-transition.opacity
+      ></div>
+
+      <!-- ═══════════ MAIN CONTENT ═══════════ -->
+      <main class="admin-main">
+        <!-- Mobile top bar -->
+        <div class="md:hidden flex items-center justify-between mb-4">
+          <button
+            @click="sidebarOpen = !sidebarOpen"
+            class="btn btn-outline btn-sm"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+          <span class="text-sm font-bold" style="color: var(--admin-gold)"
+            >پنل مدیریت آی‌چای</span
+          >
+          <button @click="toggleTheme()" class="btn btn-outline btn-sm">
+            <svg
+              x-show="darkMode"
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+            <svg
+              x-show="!darkMode"
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
+            </svg>
+          </button>
         </div>
-        <div class="overflow-x-auto">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>شماره</th>
-                <th>مشتری</th>
-                <th>مبلغ</th>
-                <th>وضعیت</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="order in orders.slice(0, 4)" :key="order.id">
-                <tr>
-                  <td class="font-mono text-sm" style="color:var(--admin-text-muted)" x-text="order.id"></td>
-                  <td x-text="order.customer"></td>
-                  <td class="font-bold" style="color:var(--admin-gold)" x-text="formatPrice(order.total)"></td>
-                  <td><span class="badge" :class="statusBadgeClass(order.status)" x-text="statusLabel(order.status)"></span></td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+
+        <!-- ─── DASHBOARD PAGE ─── -->
+        <div x-show="activePage === 'dashboard'">
+          <div class="admin-topbar">
+            <h1 class="topbar-title">داشبورد</h1>
+            <button
+              @click="toggleTheme()"
+              class="btn btn-outline btn-sm hidden md:inline-flex"
+            >
+              <svg
+                x-show="darkMode"
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                />
+              </svg>
+              <svg
+                x-show="!darkMode"
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
+              </svg>
+              <span x-text="darkMode ? 'حالت روشن' : 'حالت تاریک'"></span>
+            </button>
+          </div>
+
+          <!-- Stats grid -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="stat-card">
+              <div class="stat-number" x-text="toPersianNum(totalProducts)">
+                ۲۰
+              </div>
+              <div class="stat-label">کل محصولات</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" x-text="toPersianNum(totalCategories)">
+                ۶
+              </div>
+              <div class="stat-label">دسته‌بندی‌ها</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" x-text="toPersianNum(featuredCount)">
+                ۵
+              </div>
+              <div class="stat-label">محصولات ویژه</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" x-text="formatPrice(averagePrice)">
+                —
+              </div>
+              <div class="stat-label">میانگین قیمت</div>
+            </div>
+          </div>
+
+          <!-- Recent orders preview -->
+          <div class="data-table-wrapper mb-6">
+            <div
+              class="flex items-center justify-between p-4"
+              style="border-bottom: 1px solid var(--admin-border)"
+            >
+              <h3 class="font-bold" style="color: var(--admin-text)">
+                آخرین سفارشات
+              </h3>
+              <button
+                @click="activePage='orders'"
+                class="text-sm"
+                style="color: var(--admin-gold)"
+              >
+                مشاهده همه ←
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>شماره</th>
+                    <th>مشتری</th>
+                    <th>مبلغ</th>
+                    <th>وضعیت</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="order in orders.slice(0, 4)" :key="order.id">
+                    <tr>
+                      <td
+                        class="font-mono text-sm"
+                        style="color: var(--admin-text-muted)"
+                        x-text="order.id"
+                      ></td>
+                      <td x-text="order.customer"></td>
+                      <td
+                        class="font-bold"
+                        style="color: var(--admin-gold)"
+                        x-text="formatPrice(order.total)"
+                      ></td>
+                      <td>
+                        <span
+                          class="badge"
+                          :class="statusBadgeClass(order.status)"
+                          x-text="statusLabel(order.status)"
+                        ></span>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <button
+              @click="activePage='products'; $nextTick(() => openAddProduct())"
+              class="stat-card text-center cursor-pointer hover:border-cafe-gold/30 transition-all"
+            >
+              <div class="text-2xl mb-2">➕</div>
+              <div class="font-bold text-sm" style="color: var(--admin-text)">
+                افزودن محصول
+              </div>
+            </button>
+            <button
+              @click="activePage='categories'; $nextTick(() => openAddCategory())"
+              class="stat-card text-center cursor-pointer hover:border-cafe-gold/30 transition-all"
+            >
+              <div class="text-2xl mb-2">📂</div>
+              <div class="font-bold text-sm" style="color: var(--admin-text)">
+                افزودن دسته‌بندی
+              </div>
+            </button>
+            <button
+              @click="activePage='content'"
+              class="stat-card text-center cursor-pointer hover:border-cafe-gold/30 transition-all"
+            >
+              <div class="text-2xl mb-2">✏️</div>
+              <div class="font-bold text-sm" style="color: var(--admin-text)">
+                ویرایش محتوا
+              </div>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <!-- Quick actions -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <button @click="activePage='products'; $nextTick(() => openAddProduct())" class="stat-card text-center cursor-pointer hover:border-cafe-gold/30 transition-all">
-          <div class="text-2xl mb-2">➕</div>
-          <div class="font-bold text-sm" style="color:var(--admin-text)">افزودن محصول</div>
-        </button>
-        <button @click="activePage='categories'; $nextTick(() => openAddCategory())" class="stat-card text-center cursor-pointer hover:border-cafe-gold/30 transition-all">
-          <div class="text-2xl mb-2">📂</div>
-          <div class="font-bold text-sm" style="color:var(--admin-text)">افزودن دسته‌بندی</div>
-        </button>
-        <button @click="activePage='content'" class="stat-card text-center cursor-pointer hover:border-cafe-gold/30 transition-all">
-          <div class="text-2xl mb-2">✏️</div>
-          <div class="font-bold text-sm" style="color:var(--admin-text)">ویرایش محتوا</div>
-        </button>
-      </div>
-    </div>
+        <!-- ─── PRODUCTS PAGE ─── -->
+        <div x-show="activePage === 'products'">
+          <div class="admin-topbar">
+            <h1 class="topbar-title">مدیریت محصولات</h1>
+            <button @click="openAddProduct()" class="btn btn-gold">
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              محصول جدید
+            </button>
+          </div>
 
-    <!-- ─── PRODUCTS PAGE ─── -->
-    <div x-show="activePage === 'products'">
-      <div class="admin-topbar">
-        <h1 class="topbar-title">مدیریت محصولات</h1>
-        <button @click="openAddProduct()" class="btn btn-gold">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-          محصول جدید
-        </button>
-      </div>
+          <!-- Search -->
+          <div class="mb-4">
+            <input
+              type="text"
+              x-model.debounce.300ms="searchQuery"
+              class="form-input"
+              placeholder="جستجوی محصول..."
+              style="max-width: 400px"
+            />
+          </div>
 
-      <!-- Search -->
-      <div class="mb-4">
-        <input type="text" x-model.debounce.300ms="searchQuery" class="form-input" placeholder="جستجوی محصول..." style="max-width:400px">
-      </div>
-
-      <!-- Products table -->
-      <div class="data-table-wrapper">
-        <div class="overflow-x-auto">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width:40px"></th>
-                <th>تصویر</th>
-                <th>نام محصول</th>
-                <th>دسته‌بندی</th>
-                <th>قیمت</th>
-                <th>ویژه</th>
-                <th>عملیات</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="(product, index) in filteredProducts" :key="product.id">
-                <tr draggable="true"
-                    @dragstart="dragStart(index)"
-                    @dragover.prevent="dragOver($event)"
-                    @drop="drop(index)">
-                  <td class="drag-handle text-center" style="cursor:grab">⠿</td>
-                  <td>
-                    <img :src="product.image_url" :alt="product.name_fa" class="table-img" loading="lazy"
-                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22><rect fill=%22%231a1410%22 width=%2248%22 height=%2248%22/></svg>'">
-                  </td>
-                  <td>
-                    <div class="font-bold text-sm" style="color:var(--admin-text)" x-text="product.name_fa"></div>
-                    <div class="text-xs mt-0.5 truncate max-w-[200px]" style="color:var(--admin-text-muted)" x-text="product.description_fa"></div>
-                  </td>
-                  <td><span class="badge badge-gold" x-text="getCategoryName(product.category_id)"></span></td>
-                  <td class="font-bold" style="color:var(--admin-gold)" x-text="formatPrice(product.price)"></td>
-                  <td>
-                    <span x-show="product.is_featured" class="badge badge-green">ویژه</span>
-                    <span x-show="!product.is_featured" class="text-xs" style="color:var(--admin-text-muted)">—</span>
-                  </td>
-                  <td>
-                    <div class="flex gap-2">
-                      <button @click="openEditProduct(product)" class="btn btn-outline btn-sm">ویرایش</button>
-                      <button @click="confirmDeleteProduct(product)" class="btn btn-danger btn-sm">حذف</button>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+          <!-- Products table -->
+          <div class="data-table-wrapper">
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px"></th>
+                    <th>تصویر</th>
+                    <th>نام محصول</th>
+                    <th>دسته‌بندی</th>
+                    <th>قیمت</th>
+                    <th>ویژه</th>
+                    <th>عملیات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template
+                    x-for="(product, index) in filteredProducts"
+                    :key="product.id"
+                  >
+                    <tr
+                      draggable="true"
+                      @dragstart="dragStart(index)"
+                      @dragover.prevent="dragOver($event)"
+                      @drop="drop(index)"
+                    >
+                      <td class="drag-handle text-center" style="cursor: grab">
+                        ⠿
+                      </td>
+                      <td>
+                        <img
+                          :src="product.image_url"
+                          :alt="product.name_fa"
+                          class="table-img"
+                          loading="lazy"
+                          onerror="
+                            this.src =
+                              'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22><rect fill=%22%231a1410%22 width=%2248%22 height=%2248%22/></svg>'
+                          "
+                        />
+                      </td>
+                      <td>
+                        <div
+                          class="font-bold text-sm"
+                          style="color: var(--admin-text)"
+                          x-text="product.name_fa"
+                        ></div>
+                        <div
+                          class="text-xs mt-0.5 truncate max-w-[200px]"
+                          style="color: var(--admin-text-muted)"
+                          x-text="product.description_fa"
+                        ></div>
+                      </td>
+                      <td>
+                        <span
+                          class="badge badge-gold"
+                          x-text="getCategoryName(product.category_id)"
+                        ></span>
+                      </td>
+                      <td
+                        class="font-bold"
+                        style="color: var(--admin-gold)"
+                        x-text="formatPrice(product.price)"
+                      ></td>
+                      <td>
+                        <span
+                          x-show="product.is_featured"
+                          class="badge badge-green"
+                          >ویژه</span
+                        >
+                        <span
+                          x-show="!product.is_featured"
+                          class="text-xs"
+                          style="color: var(--admin-text-muted)"
+                          >—</span
+                        >
+                      </td>
+                      <td>
+                        <div class="flex gap-2">
+                          <button
+                            @click="openEditProduct(product)"
+                            class="btn btn-outline btn-sm"
+                          >
+                            ویرایش
+                          </button>
+                          <button
+                            @click="confirmDeleteProduct(product)"
+                            class="btn btn-danger btn-sm"
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+            <div
+              x-show="filteredProducts.length === 0"
+              class="p-8 text-center"
+              style="color: var(--admin-text-muted)"
+            >
+              <p>محصولی یافت نشد</p>
+            </div>
+          </div>
         </div>
-        <div x-show="filteredProducts.length === 0" class="p-8 text-center" style="color:var(--admin-text-muted)">
-          <p>محصولی یافت نشد</p>
+
+        <!-- ─── CATEGORIES PAGE ─── -->
+        <div x-show="activePage === 'categories'">
+          <div class="admin-topbar">
+            <h1 class="topbar-title">دسته‌بندی‌ها</h1>
+            <button @click="openAddCategory()" class="btn btn-gold">
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              دسته‌بندی جدید
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="(cat, index) in categories" :key="cat.id">
+              <div
+                class="stat-card flex items-center gap-4"
+                draggable="true"
+                @dragstart="dragStart(index)"
+                @dragover.prevent="dragOver($event)"
+                @drop="drop(index)"
+              >
+                <div class="text-2xl" x-text="cat.icon"></div>
+                <div class="flex-1">
+                  <div
+                    class="font-bold"
+                    style="color: var(--admin-text)"
+                    x-text="cat.name_fa"
+                  ></div>
+                  <div class="text-xs" style="color: var(--admin-text-muted)">
+                    <span
+                      x-text="toPersianNum(products.filter(p => p.category_id === cat.id).length)"
+                    ></span>
+                    محصول
+                  </div>
+                </div>
+                <div class="flex gap-1">
+                  <button
+                    @click="openEditCategory(cat)"
+                    class="btn btn-outline btn-sm"
+                  >
+                    ویرایش
+                  </button>
+                  <button
+                    @click="confirmDeleteCategory(cat)"
+                    class="btn btn-danger btn-sm"
+                    :disabled="cat.id === 'cat-1'"
+                  >
+                    حذف
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- ─── CATEGORIES PAGE ─── -->
-    <div x-show="activePage === 'categories'">
-      <div class="admin-topbar">
-        <h1 class="topbar-title">دسته‌بندی‌ها</h1>
-        <button @click="openAddCategory()" class="btn btn-gold">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-          دسته‌بندی جدید
-        </button>
-      </div>
+        <!-- ─── CONTENT MANAGEMENT PAGE ─── -->
+        <div x-show="activePage === 'content'">
+          <div class="admin-topbar">
+            <h1 class="topbar-title">مدیریت محتوا</h1>
+          </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <template x-for="(cat, index) in categories" :key="cat.id">
-          <div class="stat-card flex items-center gap-4"
-               draggable="true"
-               @dragstart="dragStart(index)"
-               @dragover.prevent="dragOver($event)"
-               @drop="drop(index)">
-            <div class="text-2xl" x-text="cat.icon"></div>
-            <div class="flex-1">
-              <div class="font-bold" style="color:var(--admin-text)" x-text="cat.name_fa"></div>
-              <div class="text-xs" style="color:var(--admin-text-muted)">
-                <span x-text="toPersianNum(products.filter(p => p.category_id === cat.id).length)"></span> محصول
+          <div class="stat-card p-6" style="max-width: 700px">
+            <div class="form-group">
+              <label class="form-label">نام کافه</label>
+              <input
+                type="text"
+                class="form-input"
+                x-model="contentForm.name"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">شعار کافه</label>
+              <input
+                type="text"
+                class="form-input"
+                x-model="contentForm.tagline"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">پیام خوش‌آمدگویی</label>
+              <input
+                type="text"
+                class="form-input"
+                x-model="contentForm.welcome_fa"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">درباره کافه</label>
+              <textarea
+                class="form-textarea"
+                rows="6"
+                x-model="contentForm.about_fa"
+                style="direction: rtl; text-align: right"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">تلفن تماس</label>
+              <input
+                type="text"
+                class="form-input"
+                x-model="contentForm.phone"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">آدرس</label>
+              <input
+                type="text"
+                class="form-input"
+                x-model="contentForm.address_fa"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">اینستاگرام</label>
+              <input
+                type="text"
+                class="form-input"
+                x-model="contentForm.instagram"
+                placeholder="@aichai_cafe"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">تلگرام</label>
+              <input
+                type="text"
+                class="form-input"
+                x-model="contentForm.telegram"
+                placeholder="@aichai_cafe"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">ساعات کاری</label>
+              <input
+                type="text"
+                class="form-input"
+                x-model="contentForm.hours_fa"
+              />
+            </div>
+            <div class="flex gap-3 mt-6">
+              <button @click="saveContent()" class="btn btn-gold">
+                ذخیره تغییرات
+              </button>
+              <button
+                @click="contentForm = {...cafeInfo}"
+                class="btn btn-outline"
+              >
+                بازنشانی
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── ORDERS PAGE (Mock) ─── -->
+        <div x-show="activePage === 'orders'">
+          <div class="admin-topbar">
+            <h1 class="topbar-title">سفارشات</h1>
+            <span class="badge badge-gold">دمو</span>
+          </div>
+          <p class="text-sm mb-4" style="color: var(--admin-text-muted)">
+            این بخش فقط نمایشی است و داده‌های واقعی ندارد.
+          </p>
+
+          <div class="data-table-wrapper">
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>شماره سفارش</th>
+                    <th>مشتری</th>
+                    <th>تعداد آیتم</th>
+                    <th>مبلغ کل</th>
+                    <th>تاریخ</th>
+                    <th>وضعیت</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="order in orders" :key="order.id">
+                    <tr>
+                      <td
+                        class="font-mono text-sm"
+                        style="color: var(--admin-gold)"
+                        x-text="order.id"
+                      ></td>
+                      <td x-text="order.customer"></td>
+                      <td x-text="toPersianNum(order.items)"></td>
+                      <td
+                        class="font-bold"
+                        style="color: var(--admin-gold)"
+                        x-text="formatPrice(order.total)"
+                      ></td>
+                      <td
+                        style="color: var(--admin-text-muted)"
+                        x-text="order.date"
+                      ></td>
+                      <td>
+                        <span
+                          class="badge"
+                          :class="statusBadgeClass(order.status)"
+                          x-text="statusLabel(order.status)"
+                        ></span>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── SETTINGS PAGE ─── -->
+        <div x-show="activePage === 'settings'">
+          <div class="admin-topbar">
+            <h1 class="topbar-title">تنظیمات</h1>
+          </div>
+
+          <div class="space-y-6" style="max-width: 600px">
+            <!-- Theme toggle -->
+            <div class="stat-card">
+              <h3 class="font-bold mb-3" style="color: var(--admin-text)">
+                ظاهر پنل
+              </h3>
+              <div class="flex items-center justify-between">
+                <span
+                  class="text-sm"
+                  style="color: var(--admin-text-muted)"
+                  x-text="darkMode ? 'حالت تاریک فعال است' : 'حالت روشن فعال است'"
+                ></span>
+                <button
+                  @click="toggleTheme()"
+                  class="btn btn-outline btn-sm"
+                  x-text="darkMode ? 'روشن' : 'تاریک'"
+                ></button>
               </div>
             </div>
-            <div class="flex gap-1">
-              <button @click="openEditCategory(cat)" class="btn btn-outline btn-sm">ویرایش</button>
-              <button @click="confirmDeleteCategory(cat)" class="btn btn-danger btn-sm" :disabled="cat.id === 'cat-1'">حذف</button>
+
+            <!-- Export / Import -->
+            <div class="stat-card">
+              <h3 class="font-bold mb-3" style="color: var(--admin-text)">
+                پشتیبان‌گیری
+              </h3>
+              <div class="flex flex-wrap gap-3">
+                <button @click="exportData()" class="btn btn-gold btn-sm">
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  خروجی JSON
+                </button>
+                <label class="btn btn-outline btn-sm cursor-pointer">
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                    />
+                  </svg>
+                  ورودی JSON
+                  <input
+                    type="file"
+                    accept=".json"
+                    @change="importData($event)"
+                    class="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <!-- Reset -->
+            <div class="stat-card">
+              <h3 class="font-bold mb-3" style="color: var(--admin-text)">
+                بازنشانی
+              </h3>
+              <p class="text-sm mb-3" style="color: var(--admin-text-muted)">
+                بازگرداندن تمام داده‌ها به حالت پیش‌فرض. این عمل غیرقابل بازگشت
+                است.
+              </p>
+              <button
+                @click="if(confirm('آیا مطمئن هستید؟ تمام داده‌ها حذف خواهند شد.')) resetToDefaults()"
+                class="btn btn-danger btn-sm"
+              >
+                بازنشانی به پیش‌فرض
+              </button>
             </div>
           </div>
-        </template>
-      </div>
+        </div>
+      </main>
     </div>
+    <!-- end isAuthenticated wrapper -->
 
-    <!-- ─── CONTENT MANAGEMENT PAGE ─── -->
-    <div x-show="activePage === 'content'">
-      <div class="admin-topbar">
-        <h1 class="topbar-title">مدیریت محتوا</h1>
-      </div>
+    <!-- ═══════════ PRODUCT MODAL ═══════════ -->
+    <div
+      x-show="showProductModal"
+      class="modal-overlay"
+      x-transition.opacity
+      @click.self="showProductModal=false"
+    >
+      <div class="modal-box" @click.stop>
+        <div class="modal-header">
+          <h2
+            class="modal-title"
+            x-text="editingProduct ? 'ویرایش محصول' : 'محصول جدید'"
+          ></h2>
+          <button class="modal-close" @click="showProductModal=false">✕</button>
+        </div>
 
-      <div class="stat-card p-6" style="max-width:700px">
         <div class="form-group">
-          <label class="form-label">نام کافه</label>
-          <input type="text" class="form-input" x-model="contentForm.name">
+          <label class="form-label">نام محصول *</label>
+          <input
+            type="text"
+            class="form-input"
+            x-model="productForm.name_fa"
+            placeholder="مثال: لاته"
+          />
         </div>
-        <div class="form-group">
-          <label class="form-label">شعار کافه</label>
-          <input type="text" class="form-input" x-model="contentForm.tagline">
-        </div>
-        <div class="form-group">
-          <label class="form-label">پیام خوش‌آمدگویی</label>
-          <input type="text" class="form-input" x-model="contentForm.welcome_fa">
-        </div>
-        <div class="form-group">
-          <label class="form-label">درباره کافه</label>
-          <textarea class="form-textarea" rows="6" x-model="contentForm.about_fa" style="direction:rtl;text-align:right"></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">تلفن تماس</label>
-          <input type="text" class="form-input" x-model="contentForm.phone">
-        </div>
-        <div class="form-group">
-          <label class="form-label">آدرس</label>
-          <input type="text" class="form-input" x-model="contentForm.address_fa">
-        </div>
-        <div class="form-group">
-          <label class="form-label">اینستاگرام</label>
-          <input type="text" class="form-input" x-model="contentForm.instagram" placeholder="@aichai_cafe">
-        </div>
-        <div class="form-group">
-          <label class="form-label">تلگرام</label>
-          <input type="text" class="form-input" x-model="contentForm.telegram" placeholder="@aichai_cafe">
-        </div>
-        <div class="form-group">
-          <label class="form-label">ساعات کاری</label>
-          <input type="text" class="form-input" x-model="contentForm.hours_fa">
-        </div>
-        <div class="flex gap-3 mt-6">
-          <button @click="saveContent()" class="btn btn-gold">ذخیره تغییرات</button>
-          <button @click="contentForm = {...cafeInfo}" class="btn btn-outline">بازنشانی</button>
-        </div>
-      </div>
-    </div>
 
-    <!-- ─── ORDERS PAGE (Mock) ─── -->
-    <div x-show="activePage === 'orders'">
-      <div class="admin-topbar">
-        <h1 class="topbar-title">سفارشات</h1>
-        <span class="badge badge-gold">دمو</span>
-      </div>
-      <p class="text-sm mb-4" style="color:var(--admin-text-muted)">این بخش فقط نمایشی است و داده‌های واقعی ندارد.</p>
+        <div class="form-group">
+          <label class="form-label">توضیحات</label>
+          <textarea
+            class="form-textarea"
+            rows="3"
+            x-model="productForm.description_fa"
+            placeholder="توضیحات کوتاه محصول..."
+          ></textarea>
+        </div>
 
-      <div class="data-table-wrapper">
-        <div class="overflow-x-auto">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>شماره سفارش</th>
-                <th>مشتری</th>
-                <th>تعداد آیتم</th>
-                <th>مبلغ کل</th>
-                <th>تاریخ</th>
-                <th>وضعیت</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="order in orders" :key="order.id">
-                <tr>
-                  <td class="font-mono text-sm" style="color:var(--admin-gold)" x-text="order.id"></td>
-                  <td x-text="order.customer"></td>
-                  <td x-text="toPersianNum(order.items)"></td>
-                  <td class="font-bold" style="color:var(--admin-gold)" x-text="formatPrice(order.total)"></td>
-                  <td style="color:var(--admin-text-muted)" x-text="order.date"></td>
-                  <td><span class="badge" :class="statusBadgeClass(order.status)" x-text="statusLabel(order.status)"></span></td>
-                </tr>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group">
+            <label class="form-label">قیمت (تومان) *</label>
+            <input
+              type="number"
+              class="form-input"
+              x-model="productForm.price"
+              placeholder="125000"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">دسته‌بندی</label>
+            <select class="form-select" x-model="productForm.category_id">
+              <template
+                x-for="cat in categories.filter(c => c.id !== 'cat-1')"
+                :key="cat.id"
+              >
+                <option :value="cat.id" x-text="cat.name_fa"></option>
               </template>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ─── SETTINGS PAGE ─── -->
-    <div x-show="activePage === 'settings'">
-      <div class="admin-topbar">
-        <h1 class="topbar-title">تنظیمات</h1>
-      </div>
-
-      <div class="space-y-6" style="max-width:600px">
-        <!-- Theme toggle -->
-        <div class="stat-card">
-          <h3 class="font-bold mb-3" style="color:var(--admin-text)">ظاهر پنل</h3>
-          <div class="flex items-center justify-between">
-            <span class="text-sm" style="color:var(--admin-text-muted)" x-text="darkMode ? 'حالت تاریک فعال است' : 'حالت روشن فعال است'"></span>
-            <button @click="toggleTheme()" class="btn btn-outline btn-sm" x-text="darkMode ? 'روشن' : 'تاریک'"></button>
+            </select>
           </div>
         </div>
 
-        <!-- Export / Import -->
-        <div class="stat-card">
-          <h3 class="font-bold mb-3" style="color:var(--admin-text)">پشتیبان‌گیری</h3>
-          <div class="flex flex-wrap gap-3">
-            <button @click="exportData()" class="btn btn-gold btn-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              خروجی JSON
+        <div class="form-group">
+          <label class="form-label">تصویر محصول</label>
+          <div class="flex gap-2 mb-2">
+            <button
+              type="button"
+              @click="imageMode='url'"
+              :class="{'btn-gold': imageMode==='url'}"
+              class="btn btn-outline btn-sm"
+            >
+              لینک تصویر
             </button>
-            <label class="btn btn-outline btn-sm cursor-pointer">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-              ورودی JSON
-              <input type="file" accept=".json" @change="importData($event)" class="hidden">
+            <button
+              type="button"
+              @click="imageMode='upload'"
+              :class="{'btn-gold': imageMode==='upload'}"
+              class="btn btn-outline btn-sm"
+            >
+              آپلود فایل
+            </button>
+          </div>
+          <div x-show="imageMode==='url'">
+            <input
+              type="url"
+              class="form-input"
+              x-model="productForm.image_url"
+              placeholder="https://images.unsplash.com/..."
+            />
+          </div>
+          <div x-show="imageMode==='upload'">
+            <label class="upload-area" :class="{ 'uploading': uploading }">
+              <input
+                type="file"
+                accept="image/*"
+                @change="handleImageUpload($event)"
+                class="hidden"
+                :disabled="uploading"
+              />
+              <svg
+                class="w-8 h-8 mx-auto mb-2"
+                style="color: var(--admin-text-muted)"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              <span
+                x-show="!uploading"
+                class="text-sm"
+                style="color: var(--admin-text-muted)"
+                >کلیک کنید یا فایل را بکشید</span
+              >
+              <span
+                x-show="uploading"
+                class="text-sm"
+                style="color: var(--admin-gold)"
+                >در حال آپلود...</span
+              >
             </label>
           </div>
+          <img
+            x-show="productForm.image_url"
+            :src="productForm.image_url"
+            class="image-preview"
+            @error="$el.style.display='none'"
+            @load="$el.style.display='block'"
+          />
         </div>
 
-        <!-- Reset -->
-        <div class="stat-card">
-          <h3 class="font-bold mb-3" style="color:var(--admin-text)">بازنشانی</h3>
-          <p class="text-sm mb-3" style="color:var(--admin-text-muted)">بازگرداندن تمام داده‌ها به حالت پیش‌فرض. این عمل غیرقابل بازگشت است.</p>
-          <button @click="if(confirm('آیا مطمئن هستید؟ تمام داده‌ها حذف خواهند شد.')) resetToDefaults()" class="btn btn-danger btn-sm">
-            بازنشانی به پیش‌فرض
+        <div class="form-group">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              x-model="productForm.is_featured"
+              class="w-4 h-4 rounded"
+              style="accent-color: var(--admin-gold)"
+            />
+            <span class="text-sm" style="color: var(--admin-text)"
+              >محصول ویژه</span
+            >
+          </label>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button
+            @click="saveProduct()"
+            class="btn btn-gold flex-1"
+            x-text="editingProduct ? 'ذخیره تغییرات' : 'افزودن محصول'"
+          ></button>
+          <button @click="showProductModal=false" class="btn btn-outline">
+            انصراف
           </button>
         </div>
       </div>
     </div>
 
-  </main>
-  </div><!-- end isAuthenticated wrapper -->
+    <!-- ═══════════ CATEGORY MODAL ═══════════ -->
+    <div
+      x-show="showCategoryModal"
+      class="modal-overlay"
+      x-transition.opacity
+      @click.self="showCategoryModal=false"
+    >
+      <div class="modal-box" @click.stop>
+        <div class="modal-header">
+          <h2
+            class="modal-title"
+            x-text="editingCategory ? 'ویرایش دسته‌بندی' : 'دسته‌بندی جدید'"
+          ></h2>
+          <button class="modal-close" @click="showCategoryModal=false">
+            ✕
+          </button>
+        </div>
 
-  <!-- ═══════════ PRODUCT MODAL ═══════════ -->
-  <div x-show="showProductModal" class="modal-overlay" x-transition.opacity @click.self="showProductModal=false">
-    <div class="modal-box" @click.stop>
-      <div class="modal-header">
-        <h2 class="modal-title" x-text="editingProduct ? 'ویرایش محصول' : 'محصول جدید'"></h2>
-        <button class="modal-close" @click="showProductModal=false">✕</button>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">نام محصول *</label>
-        <input type="text" class="form-input" x-model="productForm.name_fa" placeholder="مثال: لاته">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">توضیحات</label>
-        <textarea class="form-textarea" rows="3" x-model="productForm.description_fa" placeholder="توضیحات کوتاه محصول..."></textarea>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
         <div class="form-group">
-          <label class="form-label">قیمت (تومان) *</label>
-          <input type="number" class="form-input" x-model="productForm.price" placeholder="125000">
+          <label class="form-label">نام دسته‌بندی *</label>
+          <input
+            type="text"
+            class="form-input"
+            x-model="categoryForm.name_fa"
+            placeholder="مثال: قهوه‌های گرم"
+          />
         </div>
+
         <div class="form-group">
-          <label class="form-label">دسته‌بندی</label>
-          <select class="form-select" x-model="productForm.category_id">
-            <template x-for="cat in categories.filter(c => c.id !== 'cat-1')" :key="cat.id">
-              <option :value="cat.id" x-text="cat.name_fa"></option>
-            </template>
-          </select>
+          <label class="form-label">آیکون (ایموجی)</label>
+          <input
+            type="text"
+            class="form-input"
+            x-model="categoryForm.icon"
+            placeholder="☕"
+            style="max-width: 100px; font-size: 1.5rem; text-align: center"
+          />
         </div>
-      </div>
 
-      <div class="form-group">
-        <label class="form-label">تصویر محصول</label>
-        <div class="flex gap-2 mb-2">
-          <button type="button" @click="imageMode='url'" :class="{'btn-gold': imageMode==='url'}" class="btn btn-outline btn-sm">لینک تصویر</button>
-          <button type="button" @click="imageMode='upload'" :class="{'btn-gold': imageMode==='upload'}" class="btn btn-outline btn-sm">آپلود فایل</button>
+        <div class="flex gap-3 mt-6">
+          <button
+            @click="saveCategory()"
+            class="btn btn-gold flex-1"
+            x-text="editingCategory ? 'ذخیره' : 'افزودن'"
+          ></button>
+          <button @click="showCategoryModal=false" class="btn btn-outline">
+            انصراف
+          </button>
         </div>
-        <div x-show="imageMode==='url'">
-          <input type="url" class="form-input" x-model="productForm.image_url" placeholder="https://images.unsplash.com/...">
-        </div>
-        <div x-show="imageMode==='upload'">
-          <label class="upload-area" :class="{ 'uploading': uploading }">
-            <input type="file" accept="image/*" @change="handleImageUpload($event)" class="hidden" :disabled="uploading">
-            <svg class="w-8 h-8 mx-auto mb-2" style="color:var(--admin-text-muted)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-            <span x-show="!uploading" class="text-sm" style="color:var(--admin-text-muted)">کلیک کنید یا فایل را بکشید</span>
-            <span x-show="uploading" class="text-sm" style="color:var(--admin-gold)">در حال آپلود...</span>
-          </label>
-        </div>
-        <img x-show="productForm.image_url" :src="productForm.image_url" class="image-preview"
-             @error="$el.style.display='none'" @load="$el.style.display='block'">
-      </div>
-
-      <div class="form-group">
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" x-model="productForm.is_featured" class="w-4 h-4 rounded" style="accent-color:var(--admin-gold)">
-          <span class="text-sm" style="color:var(--admin-text)">محصول ویژه</span>
-        </label>
-      </div>
-
-      <div class="flex gap-3 mt-6">
-        <button @click="saveProduct()" class="btn btn-gold flex-1" x-text="editingProduct ? 'ذخیره تغییرات' : 'افزودن محصول'"></button>
-        <button @click="showProductModal=false" class="btn btn-outline">انصراف</button>
       </div>
     </div>
-  </div>
 
-  <!-- ═══════════ CATEGORY MODAL ═══════════ -->
-  <div x-show="showCategoryModal" class="modal-overlay" x-transition.opacity @click.self="showCategoryModal=false">
-    <div class="modal-box" @click.stop>
-      <div class="modal-header">
-        <h2 class="modal-title" x-text="editingCategory ? 'ویرایش دسته‌بندی' : 'دسته‌بندی جدید'"></h2>
-        <button class="modal-close" @click="showCategoryModal=false">✕</button>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">نام دسته‌بندی *</label>
-        <input type="text" class="form-input" x-model="categoryForm.name_fa" placeholder="مثال: قهوه‌های گرم">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">آیکون (ایموجی)</label>
-        <input type="text" class="form-input" x-model="categoryForm.icon" placeholder="☕" style="max-width:100px;font-size:1.5rem;text-align:center">
-      </div>
-
-      <div class="flex gap-3 mt-6">
-        <button @click="saveCategory()" class="btn btn-gold flex-1" x-text="editingCategory ? 'ذخیره' : 'افزودن'"></button>
-        <button @click="showCategoryModal=false" class="btn btn-outline">انصراف</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════ DELETE CONFIRMATION MODAL ═══════════ -->
-  <div x-show="showDeleteModal" class="modal-overlay" x-transition.opacity @click.self="showDeleteModal=false">
-    <div class="modal-box" style="max-width:400px" @click.stop>
-      <div class="modal-header">
-        <h2 class="modal-title" style="color:var(--admin-red)">تأیید حذف</h2>
-        <button class="modal-close" @click="showDeleteModal=false">✕</button>
-      </div>
-      <p class="text-sm mb-6" style="color:var(--admin-text-muted)">
-        آیا از حذف
-        <strong style="color:var(--admin-text)" x-text="deleteTarget?.name_fa"></strong>
-        مطمئن هستید؟ این عمل غیرقابل بازگشت است.
-      </p>
-      <div class="flex gap-3">
-        <button @click="executeDelete()" class="btn btn-danger flex-1">بله، حذف شود</button>
-        <button @click="showDeleteModal=false" class="btn btn-outline">انصراف</button>
+    <!-- ═══════════ DELETE CONFIRMATION MODAL ═══════════ -->
+    <div
+      x-show="showDeleteModal"
+      class="modal-overlay"
+      x-transition.opacity
+      @click.self="showDeleteModal=false"
+    >
+      <div class="modal-box" style="max-width: 400px" @click.stop>
+        <div class="modal-header">
+          <h2 class="modal-title" style="color: var(--admin-red)">تأیید حذف</h2>
+          <button class="modal-close" @click="showDeleteModal=false">✕</button>
+        </div>
+        <p class="text-sm mb-6" style="color: var(--admin-text-muted)">
+          آیا از حذف
+          <strong
+            style="color: var(--admin-text)"
+            x-text="deleteTarget?.name_fa"
+          ></strong>
+          مطمئن هستید؟ این عمل غیرقابل بازگشت است.
+        </p>
+        <div class="flex gap-3">
+          <button @click="executeDelete()" class="btn btn-danger flex-1">
+            بله، حذف شود
+          </button>
+          <button @click="showDeleteModal=false" class="btn btn-outline">
+            انصراف
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ═══════════ TOAST ═══════════ -->
-  <div x-show="showToast"
-       x-transition:enter="transition ease-out duration-300"
-       x-transition:enter-start="opacity-0 translate-y-4"
-       x-transition:enter-end="opacity-100 translate-y-0"
-       x-transition:leave="transition ease-in duration-200"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0"
-       class="toast" :class="toastType">
-    <svg x-show="toastType==='success'" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-    <svg x-show="toastType==='error'" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-    <span x-text="toastMessage"></span>
-  </div>
+    <!-- ═══════════ TOAST ═══════════ -->
+    <div
+      x-show="showToast"
+      x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0 translate-y-4"
+      x-transition:enter-end="opacity-100 translate-y-0"
+      x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0"
+      class="toast"
+      :class="toastType"
+    >
+      <svg
+        x-show="toastType==='success'"
+        class="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M5 13l4 4L19 7"
+        />
+      </svg>
+      <svg
+        x-show="toastType==='error'"
+        class="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M6 18L18 6M6 6l12 12"
+        />
+      </svg>
+      <span x-text="toastMessage"></span>
+    </div>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/admin.js"></script>
-</body>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/admin.js"></script>
+  </body>
 </html>
